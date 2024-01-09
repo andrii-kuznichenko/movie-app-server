@@ -147,6 +147,7 @@ app.get('/api/movies/comments/:id', (req, res) => {
 
 
 // "title": "Saltburn",
+//"length_minutes": 116,
 // "year": 2023,
 // "rating": 7.2,
 // "likes": 0,
@@ -159,11 +160,11 @@ app.get('/api/movies/comments/:id', (req, res) => {
 // "starring_actors": [1,2,3,4]
 
 app.post('/api/movies', async (req, res) => {
-  const { title, year, rating, age_rating, poster, big_poster, genres, director, starring_actors} = req.body;
+  const { title, length_minutes, year, rating, age_rating, poster, big_poster, genres, director, starring_actors} = req.body;
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const queryText = 'INSERT INTO movies (title, year, rating, likes, dislikes, age_rating, poster, big_poster, director_id) VALUES ($1,$2,$3,0,0,$4,$5,$6,$7) RETURNING *;'
+    const queryText = 'INSERT INTO movies (title,length_minutes, year, rating, likes, dislikes, age_rating, poster, big_poster, director_id) VALUES ($1,$8,$2,$3,0,0,$4,$5,$6,$7) RETURNING *;'
     const movie = await client.query(queryText,  [
           title,
           year,
@@ -171,7 +172,8 @@ app.post('/api/movies', async (req, res) => {
           age_rating,
           poster,
           big_poster,
-          director
+          director,
+          length_minutes
         ])
         
     for(const genre of genres){
@@ -238,41 +240,208 @@ app.post('/api/comments', (req, res) => {
   .catch(e => res.status(500).json({ message: e.message }));  
 })
 
-//
+//update movie info
 
-app.put('/api/movies/:id', (req, res) => {
+// "title": "Saltburn",
+// "length_minutes": 113
+// "year": 2023,
+// "rating": 7.2,
+// "likes": 0,
+// "dislikes": 0,
+// "age_rating": 18,
+// "poster": "https://en.wikipedia.org/wiki/Saltburn_(film)#/media/File:Saltburn_Film_Poster.jpg",
+// "big_poster": "https://assets.glamour.de/photos/64f07e1e73d8634c9e0e59d8/16:9/w_1600,c_limit/310823-saltburn-stars-aufm.jpg",
+// "genres": [1,2],
+// "director": 1
+// "starring_actors": [1,2,3,4]
+
+app.put('/api/movie/:id', async (req, res) => {
+  const { title,length_minutes, year, rating, age_rating, poster, big_poster, genres, director, starring_actors} = req.body;
   const id = req.params.id;
-  const { title, director, year, rating, poster } = req.body;
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const queryText = 'UPDATE movies SET title=$1,length_minutes=$9, year=$2,rating=$3,age_rating=$4,poster=$5,big_poster=$6,director_id=$7 WHERE id=$8 RETURNING *;'
+    await client.query(queryText,  [
+          title,
+          year,
+          rating,
+          age_rating,
+          poster,
+          big_poster,
+          director,
+          id,
+          length_minutes
+        ])
+    await client.query('DELETE FROM movies_genre WHERE movies_id=$1', [id]);
+    for(const genre of genres){
+      await client.query('INSERT INTO movies_genre(genre_id, movies_id) VALUES ($1,$2)', [genre, id])
+    }
+    await client.query('DELETE FROM movies_actors WHERE movie_id=$1', [id]);
+    for(const actor of starring_actors){
+      await client.query('INSERT INTO movies_actors(artist_id, movie_id) VALUES ($1,$2) RETURNING *' , [actor, id])
+    }
+    await client.query('COMMIT')
+    res.send('Succesfully updated!');
+  } catch (e) {
+    await client.query('ROLLBACK')
+    res.status(500).json({ message: e.message });
+  } finally {
+    client.release()
+  }
+});
+//update artist
+
+// {
+//   "first_name": "Emerald",
+//   "second_name": "Fennell",
+//   "date_of_birth": "1985-09-30",
+//   "photo": "https://en.wikipedia.org/wiki/Emerald_Fennell#/media/File:Emerald_Fennell25-03-2013_MarkJones_(cropped).jpg"
+// }
+
+app.put('/api/artist/:id', (req, res) => {
+  const id = req.params.id;
+  const { first_name, second_name, date_of_birth, photo} = req.body;
+
   pool
-    .query('UPDATE movies  SET title=$1,director=$2,year=$3,rating=$4,poster=$5 WHERE id=$6 RETURNING *;', [
-      title,
-      director,
-      year,
-      rating,
-      poster,
-      id
-    ])
-    .then(data => {
-      res.json(data.rows[0]);
+  .query('UPDATE artists SET first_name=$1, second_name=$2, date_of_birth=$3, photo=$4 WHERE id=$5 RETURNING *' ,[
+    first_name,
+    second_name,
+    date_of_birth,
+    photo,
+    id
+  ])
+  .then(artist => {
+    res.status(201).json(artist.rows[0]);
+  })
+  .catch(e => res.status(500).json({ message: e.message }));  
+})
+//put like to movie
+app.patch("/api/movie/like/:id", (req, res) => {
+  const id = req.params.id;
+  pool
+  .query('SELECT * FROM movies WHERE id=$1', [id])
+  .then(movie => {
+    const like = movie.rows[0].likes + 1;
+    pool
+    .query('UPDATE movies SET likes=$1 WHERE id=$2 RETURNING *',[like, id])
+    .then(comment => {
+      res.status(201).json(comment.rows[0])
     })
-    .catch(e => res.status(500).json({ message: e.message }));
+    .catch(e => res.status(500).json({ message: e.message }));   
+  })
+  .catch(e => res.status(500).json({ message: e.message }));  
+})
+//put dislike to movie
+app.patch("/api/movie/dislike/:id", (req, res) => {
+  const id = req.params.id;
+  pool
+  .query('SELECT * FROM movies WHERE id=$1', [id])
+  .then(movie => {
+    const dislike = movie.rows[0].dislikes + 1;
+    pool
+    .query('UPDATE movies SET dislikes=$1 WHERE id=$2 RETURNING *',[dislike, id])
+    .then(comment => {
+      res.status(201).json(comment.rows[0])
+    })
+    .catch(e => res.status(500).json({ message: e.message }));   
+  })
+  .catch(e => res.status(500).json({ message: e.message }));  
+})
+//put like to comment
+app.patch("/api/comment/like/:id", (req, res) => {
+  const id = req.params.id;
+  pool
+  .query('SELECT * FROM comments WHERE id=$1', [id])
+  .then(commentData => {
+    const like = commentData.rows[0].likes + 1;
+    pool
+    .query('UPDATE comments SET likes=$1 WHERE id=$2 RETURNING *',[like, id])
+    .then(comment => {
+      res.status(201).json(comment.rows[0])
+    })
+    .catch(e => res.status(500).json({ message: e.message }));   
+  })
+  .catch(e => res.status(500).json({ message: e.message }));  
+})
+//put dislike to comment
+app.patch("/api/comment/dislike/:id", (req, res) => {
+  const id = req.params.id;
+  pool
+  .query('SELECT * FROM comments WHERE id=$1', [id])
+  .then(commentData=> {
+    const dislike = commentData.rows[0].dislikes + 1;
+    pool
+    .query('UPDATE comments SET dislikes=$1 WHERE id=$2 RETURNING *',[dislike, id])
+    .then(comment => {
+      res.status(201).json(comment.rows[0])
+    })
+    .catch(e => res.status(500).json({ message: e.message }));   
+  })
+  .catch(e => res.status(500).json({ message: e.message }));  
+})
+// delete movie
+app.delete('/api/movie/:id', async (req, res) => {
+  const id = req.params.id;
+  
+  const client = await pool.connect()
+  try {
+
+    await client.query('BEGIN')
+
+    await client.query('DELETE FROM movies_genre WHERE movies_id=$1', [id]);
+    await client.query('DELETE FROM movies_actors WHERE movie_id=$1', [id]);
+    await client.query('DELETE FROM movies_comments WHERE movie_id=$1', [id]);
+    await client.query('DELETE FROM movies WHERE id=$1;',  [id])
+
+    await client.query('COMMIT')
+    res.send('Succesfully deleted!');
+  } catch (e) {
+    await client.query('ROLLBACK')
+    res.status(500).json({ message: e.message });
+  } finally {
+    client.release()
+  }
 });
 
-app.delete('/api/movies/:id', (req, res) => {
+// delete artist (only if all his/her movies was deleted)
+app.delete('/api/artist/:id', (req, res) => {
   const id = req.params.id;
   pool
-    .query('DELETE FROM movies WHERE id=$1 RETURNING *', [id])
-    .then(data => {
-      if (data.rowCount === 0) {
-        res.status(404).json({ message: `movie with id ${id} not found!` });
+  .query('SELECT * FROM movies WHERE director_id=$1', [id])
+  .then(director => {
+    if(director.rowCount === 0){
+      pool
+      .query('DELETE FROM artists WHERE id=$1 RETURNING *', [id])
+      .then(artist => {
+        if (artist.rowCount === 0) {
+          res.status(404).json({ message: `artist with id ${id} not found!` });
+        } else {
+          res.json(artist.rows[0]);
+        }
+      })
+      .catch(e => res.status(500).json({ message: e.message }));
       } else {
-        res.json(data.rows[0]);
+        res.status(404).send(`Artists with this id ${id} is a director for this movie ${director.rows[0].title}`)
       }
-    })
-    .catch(e => res.status(500).json({ message: e.message }));
+  })
+  .catch(e => res.status(500).json({ message: e.message }));
 });
 
-
+// delete comment
+// app.delete('/api/comment/:id', (req, res) => {
+//   const id = req.params.id;
+//   pool
+//     .query('DELETE FROM comments WHERE id=$1 RETURNING *', [id])
+//     .then(data => {
+//       if (data.rowCount === 0) {
+//         res.status(404).json({ message: `movie with id ${id} not found!` });
+//       } else {
+//         res.json(data.rows[0]);
+//       }
+//     })
+//     .catch(e => res.status(500).json({ message: e.message }));
+// });
 
 
 

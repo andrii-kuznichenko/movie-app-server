@@ -13,10 +13,30 @@ app.get('/', (req, res) => {
   res.send('backend is working');
 });
 
-//get all movies in random movies
+//get all movies in random order
 app.get('/api/movies', (req, res) => {
   pool
-    .query('SELECT id, title, year, rating, likes, dislikes, age_rating, poster, big_poster FROM movies ORDER BY RANDOM() ;')
+    .query('SELECT id, title, year, description, rating, likes, dislikes, age_rating, poster, big_poster FROM movies ORDER BY RANDOM() ;')
+    .then(data => {
+     res.status(201).json(data.rows);
+    })
+    .catch(e => res.status(500).json({ message: e.message }));
+});
+
+//get all popular movies sorted by likes
+app.get('/api/movies/popular', (req, res) => {
+  pool
+    .query('SELECT id, title, year, rating, description, likes, dislikes, age_rating, poster, big_poster FROM movies ORDER BY likes DESC;')
+    .then(data => {
+     res.status(201).json(data.rows);
+    })
+    .catch(e => res.status(500).json({ message: e.message }));
+});
+
+//get all recommended movies sorted by IMDB rating
+app.get('/api/movies/recommended', (req, res) => {
+  pool
+    .query('SELECT id, title, year, rating, likes, description, dislikes, age_rating, poster, big_poster FROM movies ORDER BY rating DESC ;')
     .then(data => {
      res.status(201).json(data.rows);
     })
@@ -75,7 +95,7 @@ app.get('/api/genres', (req, res) => {
 app.get('/api/movies/genre/:id', (req, res) => {
   const id = req.params.id;
   pool
-    .query('SELECT id, title, length_minutes, year, rating, likes, dislikes, age_rating, poster, big_poster FROM movies JOIN movies_genre ON movies.id = movies_genre.movies_id WHERE movies_genre.genre_id=$1;',
+    .query('SELECT id, title, length_minutes, description, year, rating, likes, dislikes, age_rating, poster, big_poster FROM movies JOIN movies_genre ON movies.id = movies_genre.movies_id WHERE movies_genre.genre_id=$1;',
      [id])
     .then(data => {
       if (data.rowCount === 0) {
@@ -113,7 +133,7 @@ app.get('/api/artist/:id', (req, res) => {
 app.get('/api/movies/artist/:id', (req, res) => {
   const id = req.params.id;
   pool
-    .query('SELECT id, title, length_minutes, year, rating, likes, dislikes, age_rating, poster, big_poster FROM movies JOIN movies_actors ON movies.id = movies_actors.movie_id WHERE movies_actors.artist_id=$1;',
+    .query('SELECT id, title, length_minutes, year,description,  rating, likes, dislikes, age_rating, poster, big_poster FROM movies JOIN movies_actors ON movies.id = movies_actors.movie_id WHERE movies_actors.artist_id=$1;',
      [id])
     .then(actors => {
       let moviesByArtist = {"as_starring_actor":actors.rows};
@@ -160,11 +180,11 @@ app.get('/api/movies/comments/:id', (req, res) => {
 // "starring_actors": [1,2,3,4]
 
 app.post('/api/movies', async (req, res) => {
-  const { title, length_minutes, year, rating, age_rating, poster, big_poster, genres, director, starring_actors} = req.body;
+  const { title, length_minutes, year, rating, description, age_rating, poster, big_poster, genres, director, starring_actors} = req.body;
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const queryText = 'INSERT INTO movies (title,length_minutes, year, rating, likes, dislikes, age_rating, poster, big_poster, director_id) VALUES ($1,$8,$2,$3,0,0,$4,$5,$6,$7) RETURNING *;'
+    const queryText = 'INSERT INTO movies (title,length_minutes, year, rating, likes, dislikes, age_rating, poster, big_poster, director_id, description) VALUES ($1,$8,$2,$3,0,0,$4,$5,$6,$7,$8) RETURNING *;'
     const movie = await client.query(queryText,  [
           title,
           year,
@@ -173,7 +193,8 @@ app.post('/api/movies', async (req, res) => {
           poster,
           big_poster,
           director,
-          length_minutes
+          length_minutes,
+          description
         ])
         
     for(const genre of genres){
@@ -246,6 +267,7 @@ app.post('/api/comments', (req, res) => {
 // "length_minutes": 113
 // "year": 2023,
 // "rating": 7.2,
+// "description": "afdasdfasdasd",
 // "likes": 0,
 // "dislikes": 0,
 // "age_rating": 18,
@@ -256,12 +278,12 @@ app.post('/api/comments', (req, res) => {
 // "starring_actors": [1,2,3,4]
 
 app.put('/api/movie/:id', async (req, res) => {
-  const { title,length_minutes, year, rating, age_rating, poster, big_poster, genres, director, starring_actors} = req.body;
+  const { title,length_minutes, year, rating, description, age_rating, poster, big_poster, genres, director, starring_actors} = req.body;
   const id = req.params.id;
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const queryText = 'UPDATE movies SET title=$1,length_minutes=$9, year=$2,rating=$3,age_rating=$4,poster=$5,big_poster=$6,director_id=$7 WHERE id=$8 RETURNING *;'
+    const queryText = 'UPDATE movies SET title=$1,length_minutes=$9, year=$2,rating=$3,age_rating=$4,poster=$5,big_poster=$6,director_id=$7, description=$10 WHERE id=$8 RETURNING *;'
     await client.query(queryText,  [
           title,
           year,
@@ -271,7 +293,8 @@ app.put('/api/movie/:id', async (req, res) => {
           big_poster,
           director,
           id,
-          length_minutes
+          length_minutes,
+          description
         ])
     await client.query('DELETE FROM movies_genre WHERE movies_id=$1', [id]);
     for(const genre of genres){

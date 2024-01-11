@@ -62,11 +62,12 @@ app.get('/api/movie/:id', (req, res) => {
           })
           const oneMovie = {...data.rows[0], "genres": newGenres};
           pool
-          .query('SELECT * FROM artists WHERE id=$1', [oneMovie.director_id])
+          .query("SELECT  id, first_name, second_name, DATE_PART('YEAR', AGE(CURRENT_DATE, date_of_birth)) AS date_of_birth, photo FROM  artists WHERE id=$1", 
+          [oneMovie.director_id])
           .then(director => {
             const movieDirector = {...oneMovie, "director": director.rows[0]};
             pool
-            .query('SELECT id, first_name, second_name, date_of_birth, photo FROM artists JOIN movies_actors ON artists.id = movies_actors.artist_id WHERE movies_actors.movie_id=$1;',
+            .query("SELECT id, first_name, second_name, DATE_PART('YEAR', AGE(CURRENT_DATE, date_of_birth)) AS date_of_birth, photo FROM artists JOIN movies_actors ON artists.id = movies_actors.artist_id WHERE movies_actors.movie_id=$1;",
             [oneMovie.id])
             .then(actors => {
               const movieInfo = {...movieDirector, "starring_actors": actors.rows};
@@ -111,7 +112,7 @@ app.get('/api/movies/genre/:id', (req, res) => {
 //get all artists
 app.get('/api/artists', (req, res) => {
   pool
-  .query('SELECT * FROM artists')
+  .query("SELECT  id, first_name, second_name, DATE_PART('YEAR', AGE(CURRENT_DATE, date_of_birth)) AS date_of_birth, photo FROM  artists")
   .then(data => {
     res.json(data.rows);
   })
@@ -122,7 +123,7 @@ app.get('/api/artists', (req, res) => {
 app.get('/api/artist/:id', (req, res) => {
   const id = req.params.id;
   pool
-  .query('SELECT * FROM artists WHERE id=$1', [id])
+  .query("SELECT  id, first_name, second_name, DATE_PART('YEAR', AGE(CURRENT_DATE, date_of_birth)) AS date_of_birth, photo FROM  artists WHERE id=$1", [id])
   .then(data => {
     res.json(data.rows);
   })

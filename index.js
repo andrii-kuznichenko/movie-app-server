@@ -179,25 +179,38 @@ app.get('/api/movies/comments/:id', (req, res) => {
 // post new movie with director, genres and starring actors
 
 
-// "title": "Saltburn",
-//"length_minutes": 116,
-// "year": 2023,
-// "rating": 7.2,
-// "likes": 0,
-// "dislikes": 0,
-// "age_rating": 18,
-// "poster": "https://en.wikipedia.org/wiki/Saltburn_(film)#/media/File:Saltburn_Film_Poster.jpg",
-// "big_poster": "https://assets.glamour.de/photos/64f07e1e73d8634c9e0e59d8/16:9/w_1600,c_limit/310823-saltburn-stars-aufm.jpg",
-// "genres": [1,2],
-// "director": 1
-// "starring_actors": [1,2,3,4]
+// {
+//   "title": "Don't Look Up",
+//   "length_minutes": 138,
+//   "year": 2021,
+//   "description": "Two low-level astronomers must go on a giant media tour to warn humankind of an approaching comet that will destroy planet Earth.",
+//   "rating": 7.2,
+//   "age_rating": 16,
+//   "poster": "https://upload.wikimedia.org/wikipedia/en/5/5c/Don%27t_Look_Up_2021_film.jpg",
+//   "big_poster": "https://occ-0-2794-2219.1.nflxso.net/dnm/api/v6/6AYY37jfdO6hpXcMjf9Yu5cnmO0/AAAABTAH2e0NA2CoezoBJfVTh4dIvdQWcFcZielMUf9VEWZJFk0bys6yAEl_h5RPoIwh6muQbXaTJP4H9WPwAWUQLZPV3cE9HsWSPOUR.jpg?r=6a0",
+//   "genres": [
+//       4,
+//       10,
+//       18
+//   ],
+//   "director": 31,
+//   "starring_actors": [
+//       32,
+//       11,
+//       36,
+//       37,
+//       33,
+//       34,
+//       35
+//   ]
+// }
 
 app.post('/api/movies', async (req, res) => {
   const { title, length_minutes, year, rating, description, age_rating, poster, big_poster, genres, director, starring_actors} = req.body;
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const queryText = 'INSERT INTO movies (title,length_minutes, year, rating, likes, dislikes, age_rating, poster, big_poster, director_id, description) VALUES ($1,$8,$2,$3,0,0,$4,$5,$6,$7,$8) RETURNING *;'
+    const queryText = 'INSERT INTO movies (title,length_minutes, year, rating, likes, dislikes, age_rating, poster, big_poster, director_id, description) VALUES ($1,$8,$2,$3,0,0,$4,$5,$6,$7,$9) RETURNING *;'
     const movie = await client.query(queryText,  [
           title,
           year,

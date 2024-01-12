@@ -153,7 +153,7 @@ app.get('/api/movies/artist/:id', (req, res) => {
 app.get('/api/movies/comments/:id', (req, res) => {
   const id = req.params.id;
   pool
-    .query('SELECT * FROM comments JOIN movies_comments ON comments.id =  movies_comments.comment_id WHERE movies_comments.movie_id=$1;',
+    .query('SELECT id, author, content, (CURRENT_DATE - publish_date) AS publish_date, likes, dislikes FROM comments JOIN movies_comments ON comments.id =  movies_comments.comment_id WHERE movies_comments.movie_id=$1;',
      [id])
     .then(comments => {
       res.json(comments.rows);

@@ -43,6 +43,18 @@ app.get('/api/movies/recommended', (req, res) => {
     .catch(e => res.status(500).json({ message: e.message }));
 });
 
+//search for movies by title
+app.get('/api/movies/search/:search', (req, res) => {
+  const { search } = req.params;
+  const searchString = `%${search}%`;
+  pool
+  .query("select * from movies where LOWER(title) like LOWER($1);", [searchString])
+  .then(data => {
+   res.status(201).json(data.rows);
+  })
+  .catch(e => res.status(500).json({ message: e.message }));
+})
+
 
 // get full movie info by id
 app.get('/api/movie/:id', (req, res) => {

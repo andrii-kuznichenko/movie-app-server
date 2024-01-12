@@ -245,12 +245,11 @@ app.post('/api/artists', (req, res) => {
 // }
 
 app.post('/api/comments', (req, res) => {
-  const {author, content, publish_date, movie_id} = req.body;
+  const {author, content, movie_id} = req.body;
   pool
-  .query('INSERT INTO comments (author, content, publish_date, likes, dislikes) VALUES ($1,$2,$3,0,0) RETURNING *;', [
+  .query('INSERT INTO comments (author, content, publish_date, likes, dislikes) VALUES ($1,$2,NOW(),0,0) RETURNING *;', [
     author, 
-    content, 
-    publish_date])
+    content])
   .then(comment => {
     pool
     .query('INSERT INTO movies_comments (comment_id, movie_id) VALUES ($1,$2) RETURNING *;',[comment.rows[0].id, movie_id])

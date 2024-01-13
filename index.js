@@ -85,9 +85,7 @@ app.get('/api/movie/:id', (req, res) => {
               res.status(201).json(movieInfo);
             })
           })
-          .catch(e => res.status(500).json({ message: e.message }));
         })  
-        .catch(e => res.status(500).json({ message: e.message }));
       }
     })
     .catch(e => res.status(500).json({ message: e.message }));
@@ -170,7 +168,9 @@ app.get('/api/movies/comments/:id', (req, res) => {
       res.json(comments.rows);
      if(comments.rowCount === 0){
       res.status(500).send('There is no comments for this movie');
-     } 
+     } else {
+        res.json(comments.rows);
+     }
     })
     .catch(e => res.status(500).json({ message: e.message }));
 })
@@ -229,13 +229,13 @@ app.post('/api/movies', async (req, res) => {
       await client.query('INSERT INTO movies_actors(artist_id, movie_id) VALUES ($1,$2) RETURNING *' , [actor, movie.rows[0].id])
     }
     await client.query('COMMIT')
-    res.send('Succesfully!');
   } catch (e) {
     await client.query('ROLLBACK')
     res.status(500).json({ message: e.message });
   } finally {
     client.release()
   }
+  res.send('Succesfully!');
 });
 
 //add new artist
@@ -280,7 +280,7 @@ app.post('/api/comments', (req, res) => {
     .then(movieData => {
       res.json(comment.rows[0]);
     })
-    .catch(e => res.status(500).json({ message: e.message }));  
+    .catch(e => res.status(500).json({ message: e.message }));
   })
   .catch(e => res.status(500).json({ message: e.message }));  
 })

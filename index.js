@@ -167,7 +167,7 @@ app.get('/api/movies/comments/:id', (req, res) => {
     .then(comments => {
       res.json(comments.rows);
      if(comments.rowCount === 0){
-      res.status(500).send('There is no comments for this movie');
+      res.status(500).json({message: 'There is no comments for this movie'});
      } else {
         res.json(comments.rows);
      }

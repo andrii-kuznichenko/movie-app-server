@@ -165,7 +165,6 @@ app.get('/api/movies/comments/:id', (req, res) => {
     .query('SELECT id, author, content, (CURRENT_DATE - publish_date) AS publish_date, likes, dislikes FROM comments JOIN movies_comments ON comments.id =  movies_comments.comment_id WHERE movies_comments.movie_id=$1;',
      [id])
     .then(comments => {
-      res.json(comments.rows);
      if(comments.rowCount === 0){
       res.status(500).json({message: 'There is no comments for this movie'});
      } else {

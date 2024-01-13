@@ -4,15 +4,9 @@ require('dotenv/config');
 const cors = require('cors');
 const PORT = process.env.PORT || 8000;
 const { Pool } = require('pg');
-const corsConf = {
-  origin: "*",
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-}
 const pool = new Pool({ connectionString: process.env.ELEPHANT_SQL_CONNECTION_STRING });
 app.use(express.json());
-app.use(cors(corsConf))
+app.use(cors())
 
 app.get('/', (req, res) => {
   res.send('backend is working');

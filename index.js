@@ -90,6 +90,16 @@ app.get('/api/movie/:id', (req, res) => {
     })
     .catch(e => res.status(500).json({ message: e.message }));
 });
+//get genre id by title
+app.get('/api/genresid/:title', (req, res) => {
+  const id = req.params.title;
+  pool
+  .query("SELECT  id FROM genre WHERE title=$1", [id])
+  .then(data => {
+    res.json(data.rows);
+  })
+  .catch(e => res.status(404).json({ message: e.message }));
+})
 
 //get all genres
 app.get('/api/genres', (req, res) => {
